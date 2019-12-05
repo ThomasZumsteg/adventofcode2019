@@ -1,4 +1,4 @@
-"""Solution do day 2 of Advent of Code"""
+"""Solution do day 3 of Advent of Code"""
 
 from collections import defaultdict
 
@@ -62,10 +62,13 @@ def parse(line):
 
 if __name__ == "__main__":
     TEST1 = """R8,U5,L5,D3\nU7,R6,D4,L4"""
-    assert part1(line_parser(TEST1, parse=parse)) == 6
     TEST2 = """R75,D30,R83,U83,L12,D49,R71,U7,L72
 U62,R66,U55,R34,D71,R55,D58,R83"""
+    assert part1(line_parser(TEST1, parse=parse)) == 6
     assert part1(line_parser(TEST2, parse=parse)) == 159
     values = line_parser(get_input(day=3, year=2019), parse=parse)
     print(f"Part 1: {part1(values)}")
+
+    assert part2(line_parser(TEST2, parse=parse)) == 610
+    values = line_parser(get_input(day=3, year=2019), parse=parse)
     print(f"Part 2: {part2(values)}")
