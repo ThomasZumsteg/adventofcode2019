@@ -2,7 +2,7 @@ from inspect import signature
 import logging
 import sys
 
-logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
+logging.basicConfig(stream=sys.stderr, level=logging.WARN)
 
 
 class Point:
@@ -95,3 +95,4 @@ class IntcodeComputer(metaclass=IntcodeComputerMeta):
             logging.debug(f"self.code[{self.code[self.pointer]}] = {result}")
             self.code[self.code[self.pointer]] = result
             self.pointer += 1
+
