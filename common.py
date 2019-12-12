@@ -44,6 +44,16 @@ class Point:
         diff = self - other
         return (diff.x**2 + diff.y**2)*0.5
 
+    def turn_left(self):
+        # > (1, 0) => ^ (0, -1)
+        # ^ (0, -1) => < (-1, 0)
+        # < (-1, 0) => v (0, 1)
+        # v (0, 1) => > (1, 0)
+        return Point(self.y, -self.x)
+
+    def turn_right(self):
+        return Point(-self.y, self.x)
+
 
 class Done(Exception):
     pass
