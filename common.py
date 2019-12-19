@@ -55,6 +55,9 @@ class Point:
         return Point(-self.y, self.x)
 
 
+Point.directions = (Point(0, 1), Point(0, -1), Point(1, 0), Point(-1, 0))
+
+
 class Done(Exception):
     pass
 
