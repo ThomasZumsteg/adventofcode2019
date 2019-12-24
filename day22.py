@@ -77,7 +77,6 @@ def part1(steps, size=10007, find=2019):
     (offset, increment) = (0, 1)
     for step in steps:
         offset, increment = step.build(size, offset, increment)
-    print(f"Part 1 Offset: {offset % size}, Increment: {increment % size}")
     for n in range(size):
         if (offset + increment * n) % size == find:
             return n
@@ -85,7 +84,7 @@ def part1(steps, size=10007, find=2019):
 
 
 def part2(steps,
-          size=101741582076661,
+          size=119315717514047,
           times=101741582076661,
           find=2020):
     (offset, increment) = (0, 1)
@@ -94,8 +93,7 @@ def part2(steps,
     final_increment = pow(increment, times, size)
     offset = offset * (1 - final_increment)\
         * pow((1-increment) % size, size-2, size)
-    print(f"Part 2 Offset: {offset % size}, Increment: {increment % size}")
-    return (offset + increment * find) % size
+    return (offset + final_increment * find) % size
 
 
 TEST1 = """
@@ -116,7 +114,7 @@ if __name__ == "__main__":
     result = part1(lines)
     assert part2(lines, size=10007, times=1, find=result) == 2019
 
-    result = part1(2 * lines)
-    assert part2(lines, size=10007, times=2, find=result) == 2019
+    result = part1(10 * lines)
+    assert part2(lines, size=10007, times=10, find=result) == 2019
     # NOT: 39709994149318, 4671129802281
     print(f"Part 2: {part2(lines)}")
