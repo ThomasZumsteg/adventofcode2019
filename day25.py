@@ -1,14 +1,12 @@
 """Solution to day 25 of Advent of Code"""
 
 import collections
-import re
 
 from get_input import get_input, line_parser
 from common import (
         Done,
         IntcodeComputer,
         IntcodeComputerMeta,
-        Point,
     )
 
 
@@ -102,21 +100,83 @@ class IntcodeComputerDay25(IntcodeComputer):
         raise Done
 
 
-class Walker:
+class Player:
+    blacklist = set([
+        'giant electromagnet',
+        'infinite loop',
+        'escape pod',
+        'photons',
+        'molten lava',
+    ])
+
+    directions = {
+        "north": "south",
+        "south": "north",
+        "east": "west",
+        "west": "east",
+    }
+
     def __init__(self):
-        self.position = Point(0, 0)
-        self.inv = []
-        self.blacklist = set([])
+        self.seen = collections.defaultdict(set)
+        self.room = None
+        self.last_move = None
+        self.traceback = []
+        self.to_take = []
 
-    def read(self, text):
-        if 'pressure plate' in text:
-            return None
+    def read_room(self, text):
+        varaibles = {}
+        mode = None
+        for line in text.splitlines():
+            if line.startswith('== '):
+                varaibles['ROOM'] = line[3:-3]
+                self.room = varaibles
+                mode = 'DESCRIPTION'
+            elif mode == 'DESCRIPTION':
+                varaibles[mode] = line
+                mode = None
+            elif line == 'Doors here lead:':
+                mode = 'DOORS'
+                varaibles[mode] = []
+            elif mode == 'DOORS':
+                if line == '':
+                    mode = None
+                else:
+                    door = line[2:]
+                    varaibles[mode].append(door)
+            elif line == 'Items here:':
+                mode = 'ITEMS'
+                varaibles[mode] = []
+            elif mode == 'ITEMS':
+                if line == '':
+                    mode = None
+                else:
+                    item = line[2:]
+                    if item not in self.blacklist:
+                        self.to_take.append(f"take {item}")
+                    varaibles[mode].append(item)
 
-
+    def get_command(self):
+        for item in self.room.get('ITEMS', []):
+            if item not in self.blacklist:
+                self.room['ITEMS'].remove(item)
+                return f'take {item}\n'
+        if self.last_move:
+            self.seen[self.room['ROOM']]\
+                .add(self.directions[self.last_move])
+        for door in self.room['DOORS']:
+            room = self.room['ROOM']
+            if door not in self.seen[room]:
+                self.seen[room].add(door)
+                self.last_move = door
+                self.traceback.append(self.directions[door])
+                return door + '\n'
+        return self.traceback.pop() + '\n'
 
 
 def part1(code):
     computer = IntcodeComputerDay25(code)
+    player = Player()
+    lines = []
     while True:
         try:
             computer.step()
@@ -126,8 +186,14 @@ def part1(code):
             line = ''.join(chr(c) for c in computer.output)
             print(line, end='')
             if line == 'Command?\n':
-                command = input()
-                computer.input.extend(ord(c) for c in command + '\n')
+                player.read_room(''.join(lines).strip())
+                command = player.get_command()
+                print(command)
+                computer.input.extend(ord(c) for c in command)
+                lines.clear()
+                # command = input()
+                # computer.input.extend(ord(c) for c in command + '\n')
+            lines.append(line)
             computer.output.clear()
 
 
