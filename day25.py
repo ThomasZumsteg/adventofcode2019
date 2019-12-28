@@ -119,9 +119,9 @@ class Player:
     def __init__(self):
         self.seen = collections.defaultdict(set)
         self.room = None
-        self.last_move = None
         self.traceback = []
         self.to_take = []
+        self.items = []
 
     def read_room(self, text):
         varaibles = {}
@@ -159,18 +159,22 @@ class Player:
         for item in self.room.get('ITEMS', []):
             if item not in self.blacklist:
                 self.room['ITEMS'].remove(item)
+                self.items.append(item)
                 return f'take {item}\n'
-        if self.last_move:
+        if self.traceback:
             self.seen[self.room['ROOM']]\
-                .add(self.directions[self.last_move])
+                .add(self.traceback[-1])
         for door in self.room['DOORS']:
             room = self.room['ROOM']
             if door not in self.seen[room]:
                 self.seen[room].add(door)
-                self.last_move = door
                 self.traceback.append(self.directions[door])
                 return door + '\n'
-        return self.traceback.pop() + '\n'
+        if self.traceback != []:
+            return self.traceback.pop() + '\n'
+        if self.to_room != []:
+            return self.to_room.pop(0) + '\n'
+        return input() + '\n'
 
 
 def part1(code):
@@ -187,11 +191,14 @@ def part1(code):
             print(line, end='')
             if line == 'Command?\n':
                 player.read_room(''.join(lines).strip())
+                if 'pressure-sensitive' in player.room['DESCRIPTION']:
+                    player.to_room = [
+                        player.directions[t] for t in player.traceback
+                    ]
                 command = player.get_command()
-                print(command)
+                print(command, end='')
                 computer.input.extend(ord(c) for c in command)
                 lines.clear()
-                # command = input()
                 # computer.input.extend(ord(c) for c in command + '\n')
             lines.append(line)
             computer.output.clear()
