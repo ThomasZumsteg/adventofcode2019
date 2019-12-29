@@ -1,6 +1,8 @@
 """Solution to day 25 of Advent of Code"""
 
 import collections
+import itertools
+import re
 
 from get_input import get_input, line_parser
 from common import (
@@ -121,7 +123,9 @@ class Player:
         self.room = None
         self.traceback = []
         self.to_take = []
-        self.items = []
+        self.drop_order = None
+        self.to_drop = None
+        self.mode = 'EXPLORE'
 
     def read_room(self, text):
         varaibles = {}
@@ -154,12 +158,28 @@ class Player:
                     if item not in self.blacklist:
                         self.to_take.append(f"take {item}")
                     varaibles[mode].append(item)
+            elif line == 'Items in your inventory:':
+                mode = 'INV'
+                self.room[mode] = set()
+            elif mode == 'INV':
+                if line == '':
+                    mode = None
+                else:
+                    self.room[mode].add(line[2:])
 
     def get_command(self):
+        if self.mode == 'EXPLORE':
+            return self._explore()
+        if self.mode == 'TO_SCALE':
+            return self._to_scale()
+        if self.mode == 'PASS_SCALE':
+            return self._pass_scale()
+
+    def _explore(self):
+        self.mode = 'EXPLORE'
         for item in self.room.get('ITEMS', []):
             if item not in self.blacklist:
                 self.room['ITEMS'].remove(item)
-                self.items.append(item)
                 return f'take {item}\n'
         if self.traceback:
             self.seen[self.room['ROOM']]\
@@ -172,9 +192,34 @@ class Player:
                 return door + '\n'
         if self.traceback != []:
             return self.traceback.pop() + '\n'
+        return self._to_scale()
+
+    def _to_scale(self):
+        self.mode = 'TO_SCALE'
         if self.to_room != []:
             return self.to_room.pop(0) + '\n'
-        return input() + '\n'
+        if 'INV' not in self.room:
+            return 'inv\n'
+        if self.drop_order is None:
+            self.drop_order = []
+            for n in range(0, len(self.room['INV'])):
+                for subset in itertools.combinations(self.room['INV'], n):
+                    self.drop_order.append(subset)
+        return self._pass_scale()
+
+    def _pass_scale(self):
+        self.mode = 'PASS_SCALE'
+        assert self.room['ROOM'] == 'Security Checkpoint'
+        if self.to_drop is None:
+            self.to_drop = list(self.drop_order.pop())
+        for item in self.room.get('ITEMS', []):
+            if item not in self.blacklist:
+                self.room['ITEMS'].remove(item)
+                return f'take {item}\n'
+        if self.to_drop != []:
+            return 'drop ' + self.to_drop.pop(0) + '\n'
+        self.to_drop = None
+        return 'west\n'
 
 
 def part1(code):
@@ -188,18 +233,21 @@ def part1(code):
             break
         if computer.output and computer.output[-1] == ord('\n'):
             line = ''.join(chr(c) for c in computer.output)
-            print(line, end='')
+            # print(line, end='')
+            m = re.search(r'typing (\d+) on the keypad', line)
+            if m:
+                return m.group(1)
             if line == 'Command?\n':
                 player.read_room(''.join(lines).strip())
                 if 'pressure-sensitive' in player.room['DESCRIPTION']:
-                    player.to_room = [
-                        player.directions[t] for t in player.traceback
-                    ]
+                    if player.traceback != []:
+                        player.to_room = [
+                            player.directions[t] for t in player.traceback
+                        ]
                 command = player.get_command()
-                print(command, end='')
+                # print(command, end='')
                 computer.input.extend(ord(c) for c in command)
                 lines.clear()
-                # computer.input.extend(ord(c) for c in command + '\n')
             lines.append(line)
             computer.output.clear()
 
