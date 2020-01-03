@@ -53,14 +53,9 @@ def part2(lines):
     count = 0
     while int(''.join(str(d) for d in digits)) < end:
         if exactly_one_pair(digits):
-            print(''.join(str(d) for d in digits))
             count += 1
         digits = inc_digits(digits)
     return count
-
-
-def parse(line):
-    pass
 
 
 if __name__ == "__main__":
