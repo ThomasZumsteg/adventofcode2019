@@ -7,27 +7,29 @@ trait Digits {
     fn incr(&self) -> Self;
     fn has_doubles(&self) -> bool;
     fn as_usize(&self) -> usize;
+    fn exactly_one_double(&self) -> bool;
 }
 
 impl Digits for Vec<usize> {
     fn as_digits(number: &usize) -> Self {
-        let digits: Vec<char> = number.to_string().chars().collect();
-        let mut iter = digits.iter()
-            .map(|d| d.to_string().parse::<usize>().unwrap());
-        let mut prev = iter.next().unwrap();
-        let mut result = vec![prev];
-        for d in iter {
-            if d > prev {
-                prev = d;
-            }
-            result.push(prev);
-        }
-        result
+        number.to_string().chars()
+            .map(|d| d.to_string().parse::<usize>().unwrap())
+            .collect()
     }
 
     fn incr(&self) -> Self {
         let next = self.as_usize() + 1;
-        Self::as_digits(&next)
+        let digits = <Vec<usize>>::as_digits(&next);
+        let mut iter = digits.iter();
+        let mut prev = iter.next().unwrap();
+        let mut result: Vec<usize> = vec![prev.clone()];
+        for d in iter {
+            if d > prev {
+                prev = d;
+            }
+            result.push(prev.clone());
+        }
+        result
     }
 
     fn has_doubles(&self) -> bool {
@@ -48,6 +50,24 @@ impl Digits for Vec<usize> {
             .parse::<usize>()
             .unwrap()
     }
+
+    fn exactly_one_double(&self) -> bool {
+        let mut iter = self.iter();
+        let mut last = iter.next().unwrap();
+        let mut run = 1;
+        for next in iter {
+            if next == last {
+                run += 1;
+            } else {
+                if run == 2 {
+                    return true;
+                }
+                run = 1;
+                last = next;
+            }
+        }
+        run == 2
+    }
 }
 
 fn part1(input: &Input) -> usize {
@@ -55,7 +75,6 @@ fn part1(input: &Input) -> usize {
     let mut digits: Vec<usize> = <Vec<usize>>::as_digits(start);
     let mut total = 0;
     while digits.as_usize() < *end {
-        println!("{}", digits.as_usize());
         if digits.has_doubles() {
             total += 1;
         }
@@ -65,7 +84,16 @@ fn part1(input: &Input) -> usize {
 }
 
 fn part2(input: &Input) -> usize {
-    unimplemented!()
+    let (start, end) = input;
+    let mut digits: Vec<usize> = <Vec<usize>>::as_digits(start);
+    let mut total = 0;
+    while digits.as_usize() < *end {
+        if digits.exactly_one_double() {
+            total += 1;
+        }
+        digits = digits.incr();
+    }
+    total
 }
 
 fn parse(text: &str) -> Input {
