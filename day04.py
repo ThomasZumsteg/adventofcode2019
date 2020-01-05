@@ -1,7 +1,5 @@
 """Solution do day 4 of Advent of Code"""
 
-from collections import Counter
-
 from get_input import line_parser, get_input
 
 
