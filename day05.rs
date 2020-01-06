@@ -2,104 +2,104 @@ use common::get_input;
 
 type Input = usize;
 
-pub mod intCodeComputer {
-    use std::collections::HashMap;
-
+pub mod int_code_computer {
     type Args = [isize];
+
     enum Result {
         Value(isize),
         None,
         Done,
     }
 
-    struct IntCodeFunc {
-        func: &'static dyn Fn(&Args) -> Result,
+    pub struct IntCodeFunc<T> 
+    where T: IntCodeComputer
+    {
+        func: Box<dyn Fn(&mut T, &Args) -> Result>,
         n_args: usize
     }
 
-    pub struct IntCodeComputer {
-        pub program: Vec<isize>,
-        pointer: usize,
-        opcodes: HashMap<usize, IntCodeFunc>,
-        pub done: bool,
-        pub output: Vec<isize>,
-        pub input: Vec<isize>,
+    pub trait IntCodeComputer {
+        fn new(code: Vec<isize>) -> Self;
+        fn opcode(code: &usize) -> IntCodeFunc<Self>;
+        fn pointer(&mut self) -> &mut usize;
+        fn done(&mut self) -> &mut bool;
+        fn program(&mut self) -> &mut Vec<isize>;
+
+        fn step(&mut self) {
+            let mut program = self.program();
+            let &mut pointer = self.pointer();
+            let func_code = program[pointer] as usize;
+            let func = Self::opcode(&func_code);
+            pointer += 1;
+            let mut args: Vec<isize> = Vec::with_capacity(func.n_args);
+            for i in pointer..(pointer+func.n_args) {
+                args.push(program[program[i] as usize]);
+            }
+            pointer += func.n_args;
+            let result = (*func.func)(self, &args);
+            match result {
+                Result::Value(value) => {
+                    let index = program[pointer] as usize;
+                    program[index] = value;
+                    pointer += 1;
+                },
+                Result::Done => *self.done() = true,
+                Result::None => {},
+            }
+        }
     }
 
-    macro_rules! OpCodes(
-        { $($code:expr => $func:ident ( $n_args:expr )),+ } => {
-            {
-                let mut m: HashMap<usize, IntCodeFunc> = HashMap::new();
-                $(
-                    let func = IntCodeFunc {
-                        func: &$func,
-                        n_args: $n_args,
-                    };
-                    m.insert($code, func);
-                )+
-                m
-            }
-        };
-    );
+    pub struct BasicIntCodeComputer {
+        program: Vec<isize>,
+        pointer: usize,
+        done: bool,
+        output: Vec<isize>,
+        input: Vec<isize>,
+    }
+    
+    impl BasicIntCodeComputer {
+        fn add(&mut self, args: &Args) -> Result {
+            unimplemented!()
+        }
+    }
 
-    impl IntCodeComputer {
-        pub fn new(code: Vec<isize>) -> IntCodeComputer {
-            IntCodeComputer {
+    impl IntCodeComputer for BasicIntCodeComputer {
+        fn new(code: Vec<isize>) -> Self {
+            BasicIntCodeComputer {
                 program: code,
                 pointer: 0,
                 done: false,
                 output: Vec::new(),
-                input: Vec::new(),
-                opcodes: OpCodes! {
-                    1 => add(2),
-                    2 => mult(2),
-                    3 => input(0),
-                    4 => output(1),
-                    99 => done(0)
-                }
+                input: Vec::new()
             }
         }
 
-        pub fn step(&mut self) {
-            let func_code = self.program[self.pointer] as usize;
-            let func = self.opcodes.get(&func_code).unwrap();
-            self.pointer += 1;
-            let mut args: Vec<isize> = Vec::with_capacity(func.n_args);
-            for i in self.pointer..(self.pointer+func.n_args) {
-                args.push(self.program[self.program[i] as usize]);
+        fn done(&mut self) -> &mut bool {
+            &mut self.done
+        }
+
+        fn pointer(&mut self) -> &mut usize {
+            &mut self.pointer
+        }
+
+        fn program(&mut self) -> &mut Vec<isize> {
+            &mut self.program
+        }
+
+        fn opcode(code: &usize) -> IntCodeFunc<BasicIntCodeComputer> {
+            match code {
+                1 => IntCodeFunc { n_args: 2, func: Box::new(BasicIntCodeComputer::add) },
+                _ => unimplemented!(),
             }
-            self.pointer += func.n_args;
-            let result = (*func.func)(&args);
-            match result {
-                Result::Value(value) => {
-                    let index = self.program[self.pointer] as usize;
-                    self.program[index] = value;
-                    self.pointer += 1;
-                },
-                Result::Done => self.done = true,
-            }
         }
 
-        fn add(&mut self, args: &Args) -> Result {
-            Result::Value(args[0] + args[1])
-        }
-
-        fn mult(&mut self, args: &Args) -> Result {
-            Result::Value(args[0] * args[1])
-        }
-
-        fn output(&mut self, _: &Args) -> Result {
-            Result::Value(self.output.pop().unwrap())
-        }
-
-        fn input(&mut self, args: &Args) -> Result {
-            self.input.push(args[0]);
-            Result::None
-        }
-
-        fn done(&mut self, _: &Args) -> Result {
-            Result::Done
-        }
+// //         OpCodes!{
+// //             1 => add(a, b) { Result::Value(a + b) };
+// //             2 => mult(a, b) { Result::Value(a * b) };
+// //             3 => input(self) { Result::Value(self.input.pop().unwrap()) };
+// //             4 => output(self, a) { self.output.append(a); Result::None };
+// //             99 => done() { Result::Done };
+// //         }
     }
 
 }
