@@ -11,16 +11,14 @@ pub mod int_code_computer {
         Done,
     }
 
-    pub struct IntCodeFunc<T> 
-    where T: IntCodeComputer
-    {
-        func: Box<dyn Fn(&mut T, &Args) -> Result>,
+    pub struct IntCodeFunc {
+        func: &'static dyn Fn(&mut dyn IntCodeComputer, &Args) -> Result,
         n_args: usize
     }
 
     pub trait IntCodeComputer {
         fn new(code: Vec<isize>) -> Self;
-        fn opcode(code: &usize) -> IntCodeFunc<Self>;
+        fn opcode(code: &usize) -> IntCodeFunc;
         fn pointer(&mut self) -> &mut usize;
         fn done(&mut self) -> &mut bool;
         fn program(&mut self) -> &mut Vec<isize>;
@@ -86,7 +84,7 @@ pub mod int_code_computer {
             &mut self.program
         }
 
-        fn opcode(code: &usize) -> IntCodeFunc<BasicIntCodeComputer> {
+        fn opcode(code: &usize) -> IntCodeFunc {
             match code {
                 1 => IntCodeFunc { n_args: 2, func: Box::new(BasicIntCodeComputer::add) },
                 _ => unimplemented!(),
