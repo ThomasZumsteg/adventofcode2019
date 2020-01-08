@@ -7,38 +7,42 @@ pub mod int_code_computer {
 
     enum Result {
         Value(isize),
+        Input(isize),
+        Output(isize),
         None,
         Done,
     }
 
-    pub struct IntCodeFunc {
-        func: &'static dyn Fn(&mut dyn IntCodeComputer, &Args) -> Result,
+    pub struct IntCodeFunc<T> where T: IntCodeComputer {
+        func: &'static dyn Fn(& mut T, &Args) -> Result,
         n_args: usize
     }
 
     pub trait IntCodeComputer {
-        fn new(code: Vec<isize>) -> Self;
-        fn opcode(code: &usize) -> IntCodeFunc;
-        fn pointer(&mut self) -> &mut usize;
+        type Computer;
+
+        fn new(code: Vec<isize>) -> Self::Computer;
+        fn opcode(code: &usize) -> IntCodeFunc<Self::Computer>;
         fn done(&mut self) -> &mut bool;
-        fn program(&mut self) -> &mut Vec<isize>;
+        fn get_pointer(&self) -> usize;
+        fn set_pointer(&mut self, pointer: usize);
+        fn get_program_code(&self, index: usize) -> isize;
+        fn set_program_code(&mut self, index: usize, value: isize);
 
         fn step(&mut self) {
-            let mut program = self.program();
-            let &mut pointer = self.pointer();
-            let func_code = program[pointer] as usize;
-            let func = Self::opcode(&func_code);
+            let mut pointer = self.get_pointer();
+            let code = self.get_program_code(pointer) as usize;
             pointer += 1;
+            let func = Self::opcode(&code);
             let mut args: Vec<isize> = Vec::with_capacity(func.n_args);
             for i in pointer..(pointer+func.n_args) {
-                args.push(program[program[i] as usize]);
+                args.push(self.get_program_code(i));
             }
             pointer += func.n_args;
             let result = (*func.func)(self, &args);
             match result {
                 Result::Value(value) => {
-                    let index = program[pointer] as usize;
-                    program[index] = value;
+                    self.set_program_code(pointer, value);
                     pointer += 1;
                 },
                 Result::Done => *self.done() = true,
@@ -57,7 +61,15 @@ pub mod int_code_computer {
     
     impl BasicIntCodeComputer {
         fn add(&mut self, args: &Args) -> Result {
-            unimplemented!()
+            Result::Value(args[0] + args[1])
+        }
+
+        fn mult(&mut self, args: &Args) -> Result {
+            Result::Value(args[0] * args[1])
+        }
+
+        fn done(&mut self, _: &Args) -> Result {
+            Result::Done
         }
     }
 
@@ -76,17 +88,27 @@ pub mod int_code_computer {
             &mut self.done
         }
 
-        fn pointer(&mut self) -> &mut usize {
-            &mut self.pointer
+        fn get_pointer(&self) -> usize {
+            self.pointer
         }
 
-        fn program(&mut self) -> &mut Vec<isize> {
-            &mut self.program
+        fn set_pointer(&mut self, pointer: usize) {
+            self.pointer = pointer;
         }
 
-        fn opcode(code: &usize) -> IntCodeFunc {
+        fn get_program_code(&self, pointer: usize) -> isize {
+            self.program[pointer]
+        }
+
+        fn set_program_code(&mut self, pointer: usize, value: isize) {
+            self.program[pointer] = value;
+        }
+
+        fn opcode(code: &usize) -> IntCodeFunc<Self> {
             match code {
-                1 => IntCodeFunc { n_args: 2, func: Box::new(BasicIntCodeComputer::add) },
+                1 => IntCodeFunc { n_args: 2, func: &BasicIntCodeComputer::add },
+                2 => IntCodeFunc { n_args: 2, func: &BasicIntCodeComputer::mult },
+                99 => IntCodeFunc { n_args: 0, func: &BasicIntCodeComputer::done},
                 _ => unimplemented!(),
             }
         }
