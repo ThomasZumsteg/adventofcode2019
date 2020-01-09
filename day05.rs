@@ -3,47 +3,44 @@ use common::get_input;
 type Input = usize;
 
 pub mod int_code_computer {
+    use std::cell::{RefCell, RefMut};
+
     type Args = [isize];
 
     enum Result {
         Value(isize),
-        Input(isize),
-        Output(isize),
         None,
         Done,
     }
 
-    pub struct IntCodeFunc<T> where T: IntCodeComputer {
-        func: &'static dyn Fn(& mut T, &Args) -> Result,
+    pub struct IntCodeFunc<T>
+        where T: IntCodeComputer, T: 'static {
+        func: &'static dyn Fn(&mut T, &Args) -> Result,
         n_args: usize
     }
 
     pub trait IntCodeComputer {
-        type Computer;
-
-        fn new(code: Vec<isize>) -> Self::Computer;
-        fn opcode(code: &usize) -> IntCodeFunc<Self::Computer>;
-        fn done(&mut self) -> &mut bool;
-        fn get_pointer(&self) -> usize;
-        fn set_pointer(&mut self, pointer: usize);
-        fn get_program_code(&self, index: usize) -> isize;
-        fn set_program_code(&mut self, index: usize, value: isize);
+        fn new(code: Vec<isize>) -> Self where Self: Sized;
+        fn opcode(code: &usize) -> IntCodeFunc<Self> where Self: Sized;
+        fn done(&self) -> RefMut<bool>;
+        fn pointer(&self) -> RefMut<usize>;
+        fn program(&self) -> RefMut<Vec<isize>>;
 
         fn step(&mut self) {
-            let mut pointer = self.get_pointer();
-            let code = self.get_program_code(pointer) as usize;
-            pointer += 1;
-            let func = Self::opcode(&code);
+            let mut pointer = self.pointer();
+            let code = self.program();
+            *pointer += 1;
+            let func = Self::opcode(&(code[*pointer] as usize));
             let mut args: Vec<isize> = Vec::with_capacity(func.n_args);
-            for i in pointer..(pointer+func.n_args) {
-                args.push(self.get_program_code(i));
+            for i in *pointer..(*pointer+func.n_args) {
+                args.push(code[code[i] as usize]);
             }
-            pointer += func.n_args;
+            *pointer += func.n_args;
             let result = (*func.func)(self, &args);
             match result {
                 Result::Value(value) => {
-                    self.set_program_code(pointer, value);
-                    pointer += 1;
+                    code[*pointer] = value;
+                    *pointer += 1;
                 },
                 Result::Done => *self.done() = true,
                 Result::None => {},
@@ -52,9 +49,9 @@ pub mod int_code_computer {
     }
 
     pub struct BasicIntCodeComputer {
-        program: Vec<isize>,
-        pointer: usize,
-        done: bool,
+        program: RefCell<Vec<isize>>,
+        pointer: RefCell<usize>,
+        done: RefCell<bool>,
         output: Vec<isize>,
         input: Vec<isize>,
     }
@@ -71,55 +68,50 @@ pub mod int_code_computer {
         fn done(&mut self, _: &Args) -> Result {
             Result::Done
         }
+
+        fn input(&mut self, _: &Args) -> Result {
+            Result::Value(self.input.pop().unwrap())
+        }
+
+        fn output(&mut self, args: &Args) -> Result {
+            self.output.push(args[0]);
+            Result::Done
+        }
     }
 
     impl IntCodeComputer for BasicIntCodeComputer {
         fn new(code: Vec<isize>) -> Self {
             BasicIntCodeComputer {
-                program: code,
-                pointer: 0,
-                done: false,
+                program: RefCell::new(code),
+                pointer: RefCell::new(0),
+                done: RefCell::new(false),
                 output: Vec::new(),
                 input: Vec::new()
             }
         }
 
-        fn done(&mut self) -> &mut bool {
-            &mut self.done
+        fn done(&self) -> RefMut<bool> {
+            self.done.borrow_mut()
         }
 
-        fn get_pointer(&self) -> usize {
-            self.pointer
+        fn pointer(&self) -> RefMut<usize> {
+            self.pointer.borrow_mut()
         }
 
-        fn set_pointer(&mut self, pointer: usize) {
-            self.pointer = pointer;
-        }
-
-        fn get_program_code(&self, pointer: usize) -> isize {
-            self.program[pointer]
-        }
-
-        fn set_program_code(&mut self, pointer: usize, value: isize) {
-            self.program[pointer] = value;
+        fn program(&self) -> RefMut<Vec<isize>> {
+            self.program.borrow_mut()
         }
 
         fn opcode(code: &usize) -> IntCodeFunc<Self> {
-            match code {
+            match code % 100 {
                 1 => IntCodeFunc { n_args: 2, func: &BasicIntCodeComputer::add },
                 2 => IntCodeFunc { n_args: 2, func: &BasicIntCodeComputer::mult },
+                3 => IntCodeFunc { n_args: 0, func: &BasicIntCodeComputer::input },
+                4 => IntCodeFunc { n_args: 1, func: &BasicIntCodeComputer::output },
                 99 => IntCodeFunc { n_args: 0, func: &BasicIntCodeComputer::done},
                 _ => unimplemented!(),
             }
         }
-
-// //         OpCodes!{
-// //             1 => add(a, b) { Result::Value(a + b) };
-// //             2 => mult(a, b) { Result::Value(a * b) };
-// //             3 => input(self) { Result::Value(self.input.pop().unwrap()) };
-// //             4 => output(self, a) { self.output.append(a); Result::None };
-// //             99 => done() { Result::Done };
-// //         }
     }
 
 }
