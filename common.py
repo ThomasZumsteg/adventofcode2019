@@ -3,7 +3,7 @@ import logging
 import sys
 import math
 
-logging.basicConfig(stream=sys.stderr, level=logging.WARN)
+logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
 
 class Point:
@@ -126,4 +126,3 @@ class IntcodeComputer(metaclass=IntcodeComputerMeta):
             logging.debug(f"self.code[{self.code[self.pointer]}] = {result}")
             self.code[self.code[self.pointer]] = result
             self.pointer += 1
-
