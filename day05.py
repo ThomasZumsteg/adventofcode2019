@@ -49,7 +49,6 @@ def part1(code):
     computer.input.append(1)
     try:
         while True:
-            print(f"{computer.pointer} -> {computer.func.name}")
             computer.step()
     except Done:
         result = tuple(n for n in computer.output if n != 0)

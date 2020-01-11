@@ -3,7 +3,7 @@ import logging
 import sys
 import math
 
-logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 
 
 class Point:
